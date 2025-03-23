@@ -1,7 +1,7 @@
 # FrontiEV
 Arduino code to control FrontiEV components
 
-Modules will be included for each component to be controlled by the Arduino Uno R4 WiFi with CAN BUS Shield
+Modules for each component will be pulled from other repositories and included to be controlled by the Arduino Uno R4 WiFi with CAN BUS Shield
 
 Modules
 - Air Conditioner
