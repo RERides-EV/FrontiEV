@@ -16,116 +16,26 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-Leaf AC Control over UART (LIN emulation) 
-modified by Dave Durazzo
+#include "arduino_leaf_ac.h"
 
-Controls values for the Air Conditioner compressor:
-  Input on pin 2 - HIGH = compressor ON, LOW = compressor OFF
-  Output on pin 1 - TX pin of Serial1, used for LIN bus communication
-  buf[1] controls compressor power (0-3kW):
-    - 0x00: 0kW (OFF)
-    - 0x05: 1kW
-    - 0x0c: ~1.5kW
-    - 0x12: 2kW
-    - 0x16: 3kW
+// Global variables
+bool acEnabled = false;
 
-LIN Protocol Implementation:
-  1. Generate break signal by pulling line low
-  2. Send sync byte (0x55)
-  3. Send ID byte (0xFB)
-  4. Send 8 data bytes
-  5. Send checksum
-
-Originally developed by "abetanco" 
-https://openinverter.org/forum/viewtopic.php?p=75831#p75831
-
-This code is in the Public Domain
-*/
-
-#define AC_INPUT_PIN 2
-#define AC_OUTPUT_PIN 1
-#define DUMMY_PIN 3
-#define AC_ON_CMD 0xb3        // Command byte for AC ON
-#define AC_OFF_CMD 0xb2       // Command byte for AC OFF
-#define AC_KW 0x0c            // ox0c commands 1.5kW
-#define AC_ZERO_KW 0x00       // 0x00 commands 0kW
-#define CKSUM_AC_KW 0xb3      // not sure of quick calculation yet; looks like AC_ON+0x16?
-#define CKSUM_AC_ZERO_KW 0xc1 // 0kW checksum is always 0xc1
-
-
-int brklen = 14; // 13 bits + 1 bit for break delimiter
-uint8_t sync = 0x55;
-uint8_t addr = 0xfb;
-//uint8_t AC_KW = 0x0c  // ox0c commands 1.5kW
-//uint8_t AC_ZERO_KW = 0x00  // 0x00 commands 0kW
-//uint8_t CKSUM_AC_KW = 0xb3  // not sure of quick calculation yet; looks like AC_ON+0x16?
-//uint8_t CKSUM_AC_ZERO_KW = 0xc1 // always for AC_KW at 0kW
-uint8_t buf[8] = {0xb3, AC_OFF, 0x00, 0x90, 0xFF, 0x00, 0x00, 0x00};  
-uint8_t cksum = 0xb7;
-int baud = 19200;
-uint16_t brk = (brklen*1000000/baud); // brk in microseconds
+// Global PIN definitions
+int AC_OUTPUT_PIN = 1;       // Must be Serial1 TX pin for proper LIN communication
+int AC_INPUT_PIN = 2;        // Input pin to detect when AC should be ON/OFF
+int DUMMY_PIN = 3;           // Used for debugging/triggering
 
 void setup() {
-  pinMode(AC_OUTPUT_PIN, OUTPUT);
-  pinMode(AC_INPUT_PIN, INPUT_PULLUP);
-  
-  // Initialize USB serial for debugging
-  Serial.begin(9600);
-  Serial.print("Break time (us): ");
-  Serial.println(brk);
-  
-  // Initialize Serial1 for data transmission after break signal
-  Serial1.begin(baud);
+  // Initialize the AC module
+  setupAC();
 }
 
 void loop() {
-  int ac_input_status = digitalRead(AC_INPUT_PIN);
-
-  if (ac_input_status == HIGH) {
-    buf[0] = AC_ON_CMD
-    buf[1] = AC_KW;
-    cksum = CKSUM_AC_KW;
-    Serial.println("Compressor On Command");
-  } else {
-    buf[0] = AC_OFF_CMD
-    buf[1] = AC_ZERO_KW;
-    cksum = CKSUM_AC_ZERO_KW;
-    Serial.println("Compressor Off Command");
-  }
+  // Read the toggle switch and update AC state
+  acEnabled = digitalRead(AC_INPUT_PIN);
+  updateAC(acEnabled);
   
-  // Send LIN bus commands
-  pinMode(DUMMY_PIN, OUTPUT);
-  digitalWrite(DUMMY_PIN, HIGH);
-  
-  // Generate LIN break signal manually
-  digitalWrite(AC_OUTPUT_PIN, LOW);
-  delayMicroseconds(brk);
-  digitalWrite(AC_OUTPUT_PIN, HIGH);
-
-  // Small delay after break signal
-  delayMicroseconds(50);
-
-  // Send LIN frame data using Serial1
-  Serial1.begin(baud);  // Reinitialize before each transmission IS THIS NECESSARY?
-  Serial1.write(sync);
-  Serial1.write(addr);
-
-  // Data bytes
-  for (int i = 0; i < 8; i++) {
-    Serial1.write(buf[i]);
-  }
-  
-// Last byte   Serial1.write(buf[7]);
-  Serial1.write(cksum);
-  
-  // Wait for transmission to complete
-  Serial1.flush();
-  
-  // Debug output
-  Serial.print("Buffer[1] (Power Level): 0x");
-  Serial.println(buf[1], HEX);
-  
-  // Add delay between transmissions
-  delay(200);
+  // Small delay to prevent too frequent updates
+  delay(100);
 }
