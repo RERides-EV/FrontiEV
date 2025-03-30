@@ -17,6 +17,7 @@
 */
 
 #include "arduino_leaf_ac.h"
+#include "Arduino_LED_Matrix.h"
 
 // Global variables
 bool acEnabled = false;
