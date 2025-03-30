@@ -30,6 +30,7 @@ int DUMMY_PIN = 3;           // Used for debugging/triggering
 void setup() {
   // Initialize the AC module
   setupAC();
+  setup LEDMatrix();
 }
 
 void loop() {
