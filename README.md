@@ -1,9 +1,9 @@
 # FrontiEV
 Arduino code to control FrontiEV components
 
-Branches will be created for each component to be controlled by the Arduino Uno R4 WiFi with CAN BUS Shield
+Modules for each component will be pulled from other repositories and included to be controlled by the Arduino Uno R4 WiFi with CAN BUS Shield
 
-Branches
+Modules
 - Air Conditioner
 - Heater
 - Fuel Gauge
